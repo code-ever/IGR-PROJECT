@@ -22,7 +22,7 @@ const Header = () => {
 
     const Logout = () => {
         logout()
-        navigate( '/login' )
+        navigate( '/' )
     }
     return (
         <header className="w-full h-16 bg-white shadow flex items-center justify-between fixed top-0 px-6 md:px-20 md:pr-52">
