@@ -14,14 +14,16 @@ import MembersRecords from './pages/dasboard/MembersRecords'
 import Footer from './layout/Footer'
 import TaxpayerDetails from './pages/taxpayers/TaxpayerDetails'
 import TaxVerify from './pages/taxpayers/TaxVerify'
+import ErrorPage from './pages/dasboard/ErrorPage'
 const App = () => {
 
   return (
     <div>
       <Routes>
-        <Route path='/' element={<Login />} />
+        <Route path='/login' element={<Login />} />
+        <Route path='/' element={<ErrorPage />} />
         <Route path="register" element={<Register />} />
-        <Route path='/' element={<Layout />}>
+        <Route path='/.' element={<Layout />}>
           <Route path='dashboard' element={<Dashboard />} />
           <Route path='taxPayerDetail/:id' element={<TaxpayerDetails />} />
           <Route path='/payments/verify/:id' element={<TaxVerify />} />

@@ -5,20 +5,25 @@ import api from "../../services/api";
 
 const MakePayment = () => {
   const navigate = useNavigate();
+
   const [revenueTypes, setRevenueTypes] = useState([]);
   const [selectedRevenue, setSelectedRevenue] = useState(null);
-  const [revenueTypeId, setRevenueTypeId] = useState("");
+  const [revenueTypeId, setRevenueTypeId] = useState(""); // ✅ STRING
   const [amount, setAmount] = useState("");
   const [periodReference, setPeriodReference] = useState("");
   const [periodOptions, setPeriodOptions] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Fetch revenue types
+  /* ================= FETCH REVENUE TYPES ================= */
   useEffect(() => {
     const getRevenueTypes = async () => {
       try {
         const res = await api.get("/revenue-types");
-        const types = Array.isArray(res.data) ? res.data : res.data?.data || [];
+
+        const types = Array.isArray(res.data)
+          ? res.data
+          : res.data?.data || [];
+
         setRevenueTypes(types);
       } catch (error) {
         console.error(error);
@@ -29,53 +34,58 @@ const MakePayment = () => {
     getRevenueTypes();
   }, []);
 
-  // Handle revenue selection
+  /* ================= HANDLE REVENUE CHANGE ================= */
   const handleRevenueChange = (e) => {
-    const selectedId = e.target.value;
+    const selectedId = e.target.value; // ✅ KEEP STRING
     setRevenueTypeId(selectedId);
 
-    const revenue = revenueTypes.find((r) => r.id === selectedId);
+    const revenue = revenueTypes.find(
+      (r) => String(r.id) === selectedId // ✅ SAFE MATCH
+    );
 
-    if (revenue) {
-      setSelectedRevenue(revenue);
-      setAmount(revenue.amount || revenue.defaultAmount || "");
-
-      const now = new Date();
-      let options = [];
-
-      // YEARLY
-      if (revenue.period === "yearly") {
-        options = Array.from({ length: 5 }, (_, i) => `${now.getFullYear() - i}`);
-      }
-
-      // MONTHLY
-      else if (revenue.period === "monthly") {
-        options = Array.from({ length: 12 }, (_, i) => {
-          const month = (i + 1).toString().padStart(2, "0");
-          return `${now.getFullYear()}-${month}`; // YYYY-MM
-        });
-      }
-
-      // WEEKLY
-      else if (revenue.period === "weekly") {
-        options = Array.from({ length: 8 }, (_, i) => {
-          const start = new Date(now);
-          start.setDate(now.getDate() + i * 7);
-          return start.toISOString().slice(0, 10); // YYYY-MM-DD
-        });
-      }
-
-      setPeriodOptions(options);
-      setPeriodReference("");
-    } else {
+    if (!revenue) {
       setSelectedRevenue(null);
       setAmount("");
       setPeriodOptions([]);
       setPeriodReference("");
+      return;
     }
+
+    setSelectedRevenue(revenue);
+    setAmount(revenue.amount || revenue.defaultAmount || "");
+
+    const now = new Date();
+    let options = [];
+
+    /* YEARLY */
+    if (revenue.period === "yearly") {
+      options = Array.from({ length: 5 }, (_, i) =>
+        `${now.getFullYear() - i}`
+      );
+    }
+
+    /* MONTHLY */
+    else if (revenue.period === "monthly") {
+      options = Array.from({ length: 12 }, (_, i) => {
+        const month = (i + 1).toString().padStart(2, "0");
+        return `${now.getFullYear()}-${month}`;
+      });
+    }
+
+    /* WEEKLY */
+    else if (revenue.period === "weekly") {
+      options = Array.from({ length: 8 }, (_, i) => {
+        const date = new Date();
+        date.setDate(now.getDate() + i * 7);
+        return date.toISOString().slice(0, 10);
+      });
+    }
+
+    setPeriodOptions(options);
+    setPeriodReference("");
   };
 
-  // Submit payment
+  /* ================= PAYSTACK ================= */
   const handleSubmit = (e) => {
     e.preventDefault();
 
@@ -97,9 +107,11 @@ const MakePayment = () => {
       amount: Number(amount) * 100,
       currency: "NGN",
       ref: reference,
+
       callback: function (response) {
         recordPayment(response.reference);
       },
+
       onClose: function () {
         toast.info("Payment popup closed");
       },
@@ -108,13 +120,13 @@ const MakePayment = () => {
     handler.openIframe();
   };
 
-  // Record payment to backend and redirect to dashboard
+  /* ================= RECORD PAYMENT ================= */
   const recordPayment = async (paystackReference) => {
     try {
       setLoading(true);
 
       const payload = {
-        revenueTypeId,
+        revenueTypeId: Number(revenueTypeId), // ✅ CONVERT HERE ONLY
         amount: Number(amount),
         periodReference,
         paymentGatewayReference: paystackReference,
@@ -125,16 +137,17 @@ const MakePayment = () => {
 
       toast.success("Payment successful and recorded");
 
-      // Redirect to dashboard
       navigate("/dashboard");
 
-      // Reset form (optional)
+      /* RESET FORM */
       setRevenueTypeId("");
       setAmount("");
       setPeriodReference("");
       setSelectedRevenue(null);
       setPeriodOptions([]);
     } catch (error) {
+      console.error(error);
+
       let message = "Payment failed";
       const backendMessage = error?.response?.data?.message;
 
@@ -150,24 +163,30 @@ const MakePayment = () => {
     }
   };
 
+  /* ================= UI ================= */
   return (
     <div className="w-full min-h-screen bg-gray-50 flex justify-center items-center p-4">
       <div className="flex flex-col md:flex-row gap-10 items-start">
         <div className="bg-white shadow-lg rounded-xl p-6 w-full md:w-[500px] max-w-lg">
-          <p className="text-center py-3 font-bold text-xl md:text-2xl">Make Your Payment</p>
+          <p className="text-center py-3 font-bold text-xl md:text-2xl">
+            Make Your Payment
+          </p>
 
-          <form onSubmit={handleSubmit} className="flex flex-col gap-y-4 py-4 text-gray-600">
+          <form
+            onSubmit={handleSubmit}
+            className="flex flex-col gap-y-4 py-4 text-gray-600"
+          >
             {/* Revenue Type */}
             <div className="flex flex-col">
               <label className="mb-1 font-medium">Revenue Type</label>
               <select
-                value={revenueTypeId}
+                value={revenueTypeId} // ✅ STRING VALUE
                 onChange={handleRevenueChange}
                 className="border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-green-600"
               >
                 <option value="">Select Revenue Type</option>
                 {revenueTypes.map((type) => (
-                  <option key={type.id} value={type.id}>
+                  <option key={type.id} value={String(type.id)}>
                     {type.name} ({type.period})
                   </option>
                 ))}
@@ -192,7 +211,7 @@ const MakePayment = () => {
               />
             </div>
 
-            {/* Period Reference */}
+            {/* Period */}
             <div className="flex flex-col">
               <label className="mb-1 font-medium">Period Reference</label>
               <select
@@ -222,8 +241,11 @@ const MakePayment = () => {
           </form>
         </div>
 
+        {/* Side Info */}
         <div className="max-w-md text-gray-700 space-y-3">
-          <p className="font-bold text-xl md:text-2xl">Payment Information</p>
+          <p className="font-bold text-xl md:text-2xl">
+            Payment Information
+          </p>
           <ul className="list-disc pl-5 space-y-2 text-sm">
             <li>Your payment details are secured.</li>
             <li>Authentication is handled securely.</li>
@@ -232,7 +254,10 @@ const MakePayment = () => {
 
           <p className="text-sm mt-4">
             You can track your payment{" "}
-            <Link to="/history" className="text-green-700 font-semibold hover:underline">
+            <Link
+              to="/history"
+              className="text-green-700 font-semibold hover:underline"
+            >
               Status
             </Link>
           </p>
