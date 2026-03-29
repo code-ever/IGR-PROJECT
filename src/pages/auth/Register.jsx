@@ -6,48 +6,55 @@ import loginImage from "../../assets/images/loginImage.jpg";
 // import log from "../../assets/images/logo.png";
 import log from "../../assets/images/ebonyi_logo.png";
 
-
 const Register = () => {
     const navigate = useNavigate();
     const { loading } = useAuth();
 
-    const [fullName, setFullName] = useState( "" );
-    const [email, setEmail] = useState( "" );
-    const [phoneNumber, setPhoneNumber] = useState( "" );
-    const [businessName, setBusinessName] = useState( "" );
-    const [password, setPassword] = useState( "" );
+    const [fullName, setFullName] = useState("");
+    const [email, setEmail] = useState("");
+    const [phoneNumber, setPhoneNumber] = useState("");
+    const [businessName, setBusinessName] = useState("");
+    const [password, setPassword] = useState("");
+
+    // ✅ Added confirm password state
+    const [confirmPassword, setConfirmPassword] = useState("");
 
     // ✅ Added preload state
-    const [preloading, setPreloading] = useState( false );
+    const [preloading, setPreloading] = useState(false);
 
-    const handleSubmit = async ( e ) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if ( preloading ) return; // prevent multiple clicks
-        setPreloading( true );
+        // ✅ Check if passwords match
+        if (password !== confirmPassword) {
+            alert("Passwords do not match");
+            return;
+        }
+
+        if (preloading) return; // prevent multiple clicks
+        setPreloading(true);
 
         try {
-            const res = await api.post( "/auth/register", {
+            const res = await api.post("/auth/register", {
                 fullName,
                 email,
                 phoneNumber,
                 password,
                 businessName,
-            } );
+            });
 
-            console.log( res );
+            console.log(res);
             const { user, token } = res.data;
 
-            localStorage.setItem( "token", token );
-            localStorage.setItem( "user", JSON.stringify( user ) );
+            localStorage.setItem("token", token);
+            localStorage.setItem("user", JSON.stringify(user));
 
-            navigate( "/dashboard" );
-
-        } catch ( err ) {
-            console.error( err );
-            alert( "Registration failed" );
+            navigate("/dashboard");
+        } catch (err) {
+            console.error(err);
+            alert("Registration failed");
         } finally {
-            setPreloading( false ); // stop loader
+            setPreloading(false); // stop loader
         }
     };
 
@@ -81,6 +88,14 @@ const Register = () => {
                                 <Input label="Phone Number" value={phoneNumber} onChange={setPhoneNumber} />
                                 <Input label="Business Name" value={businessName} onChange={setBusinessName} />
                                 <Input label="Password" type="password" value={password} onChange={setPassword} />
+
+                                {/* ✅ Fixed Confirm Password */}
+                                <Input 
+                                    label="Confirm Password" 
+                                    type="password" 
+                                    value={confirmPassword} 
+                                    onChange={setConfirmPassword} 
+                                />
 
                                 <button
                                     type="submit"
@@ -131,14 +146,14 @@ const Register = () => {
     );
 };
 
-const Input = ( { label, type = "text", value, onChange } ) => (
+const Input = ({ label, type = "text", value, onChange }) => (
     <div className="flex flex-col mt-3">
         <label className="text-sm text-gray-400">{label}</label>
         <input
             type={type}
             className="text-gray-600 border border-gray-200 rounded-md p-2"
             value={value}
-            onChange={( e ) => onChange( e.target.value )}
+            onChange={(e) => onChange(e.target.value)}
             required
         />
     </div>
