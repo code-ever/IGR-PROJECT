@@ -31,7 +31,7 @@ const Dashboard = () => {
 
   const getTransaction = async () => {
     try {
-      console.log( "LOGGED USER:", user );
+     
 
       // ✅ CRITICAL FIX — auditor gets ALL payments
       const endpoint = isAuditor ? "/payments" : "/payments/user";

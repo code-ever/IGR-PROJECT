@@ -14,6 +14,7 @@ import MembersRecords from './pages/dasboard/MembersRecords'
 import Footer from './layout/Footer'
 import TaxpayerDetails from './pages/taxpayers/TaxpayerDetails'
 import TaxVerify from './pages/taxpayers/TaxVerify'
+import PayerDashboard from './pages/dasboard/PayerDashboard'
 const App = () => {
 
   return (
@@ -24,6 +25,7 @@ const App = () => {
         <Route path="register" element={<Register />} />
         <Route path='/' element={<Layout />}>
           <Route path='dashboard' element={<Dashboard />} />
+          <Route path='taxpayer-dashboard' element={<PayerDashboard />} />
           <Route path='taxPayerDetail/:id' element={<TaxpayerDetails />} />
           <Route path='/payments/verify/:id' element={<TaxVerify />} />
 

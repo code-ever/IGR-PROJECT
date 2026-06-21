@@ -8,7 +8,7 @@ const MakePayment = () => {
 
   const [revenueTypes, setRevenueTypes] = useState([]);
   const [selectedRevenue, setSelectedRevenue] = useState(null);
-  const [revenueTypeId, setRevenueTypeId] = useState(""); // ✅ STRING
+  const [revenueTypeId, setRevenueTypeId] = useState("");
   const [amount, setAmount] = useState("");
   const [periodReference, setPeriodReference] = useState("");
   const [periodOptions, setPeriodOptions] = useState([]);
@@ -36,11 +36,12 @@ const MakePayment = () => {
 
   /* ================= HANDLE REVENUE CHANGE ================= */
   const handleRevenueChange = (e) => {
-    const selectedId = e.target.value; // ✅ KEEP STRING
+    const selectedId = e.target.value;
+
     setRevenueTypeId(selectedId);
 
     const revenue = revenueTypes.find(
-      (r) => String(r.id) === selectedId // ✅ SAFE MATCH
+      (r) => String(r.id) === selectedId
     );
 
     if (!revenue) {
@@ -57,23 +58,17 @@ const MakePayment = () => {
     const now = new Date();
     let options = [];
 
-    /* YEARLY */
     if (revenue.period === "yearly") {
-      options = Array.from({ length: 5 }, (_, i) =>
-        `${now.getFullYear() - i}`
+      options = Array.from(
+        { length: 5 },
+        (_, i) => `${now.getFullYear() - i}`
       );
-    }
-
-    /* MONTHLY */
-    else if (revenue.period === "monthly") {
+    } else if (revenue.period === "monthly") {
       options = Array.from({ length: 12 }, (_, i) => {
-        const month = (i + 1).toString().padStart(2, "0");
+        const month = String(i + 1).padStart(2, "0");
         return `${now.getFullYear()}-${month}`;
       });
-    }
-
-    /* WEEKLY */
-    else if (revenue.period === "weekly") {
+    } else if (revenue.period === "weekly") {
       options = Array.from({ length: 8 }, (_, i) => {
         const date = new Date();
         date.setDate(now.getDate() + i * 7);
@@ -89,8 +84,18 @@ const MakePayment = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    if (!revenueTypeId || !amount || !periodReference) {
-      toast.error("All fields are required");
+    if (!revenueTypeId) {
+      toast.error("Please select revenue type");
+      return;
+    }
+
+    if (!amount) {
+      toast.error("Amount is required");
+      return;
+    }
+
+    if (!periodReference) {
+      toast.error("Please select period");
       return;
     }
 
@@ -99,13 +104,23 @@ const MakePayment = () => {
       return;
     }
 
-    const reference = "T" + Date.now();
+    const user = JSON.parse(
+      localStorage.getItem("user") || "{}"
+    );
+
+    const reference = `T${Date.now()}`;
 
     const handler = window.PaystackPop.setup({
       key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
-      email: "nwabueze.h.iyke@gmail.com",
+
+      email:
+        user?.email ||
+        "user@email.com",
+
       amount: Number(amount) * 100,
+
       currency: "NGN",
+
       ref: reference,
 
       callback: function (response) {
@@ -113,7 +128,7 @@ const MakePayment = () => {
       },
 
       onClose: function () {
-        toast.info("Payment popup closed");
+        toast.info("Payment cancelled");
       },
     });
 
@@ -126,38 +141,60 @@ const MakePayment = () => {
       setLoading(true);
 
       const payload = {
-        revenueTypeId: Number(revenueTypeId), // ✅ CONVERT HERE ONLY
+        revenueTypeId,
         amount: Number(amount),
         periodReference,
-        paymentGatewayReference: paystackReference,
-        paymentGatewayProvider: "paystack",
+        paymentGatewayReference:
+          paystackReference,
+        paymentGatewayProvider:
+          "paystack",
       };
 
-      await api.post("/payments", payload);
+      console.log("TOKEN:");
+      console.log(
+        localStorage.getItem("token")
+      );
 
-      toast.success("Payment successful and recorded");
+      console.log("PAYLOAD:");
+      console.log(payload);
 
-      navigate("/dashboard");
+      const res = await api.post(
+        "/payments",
+        payload
+      );
 
-      /* RESET FORM */
+      console.log(
+        "PAYMENT RESPONSE:"
+      );
+      console.log(res.data);
+
+      toast.success(
+        "Payment successful and recorded"
+      );
+
       setRevenueTypeId("");
       setAmount("");
       setPeriodReference("");
       setSelectedRevenue(null);
       setPeriodOptions([]);
+
+      navigate("/dashboard");
     } catch (error) {
-      console.error(error);
+      console.log(
+        "PAYMENT ERROR:"
+      );
 
-      let message = "Payment failed";
-      const backendMessage = error?.response?.data?.message;
+      console.log(error);
 
-      if (Array.isArray(backendMessage)) {
-        message = backendMessage[0];
-      } else if (backendMessage) {
-        message = backendMessage;
-      }
+      console.log(
+        error.response?.data
+      );
 
-      toast.error(message);
+      toast.error(
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        "Payment failed"
+      );
     } finally {
       setLoading(false);
     }
@@ -165,104 +202,120 @@ const MakePayment = () => {
 
   /* ================= UI ================= */
   return (
-    <div className="w-full min-h-screen bg-gray-50 flex justify-center items-center p-4">
-      <div className="flex flex-col md:flex-row gap-10 items-start">
-        <div className="bg-white shadow-lg rounded-xl p-6 w-full md:w-[500px] max-w-lg">
-          <p className="text-center py-3 font-bold text-xl md:text-2xl">
-            Make Your Payment
-          </p>
+    <div className="min-h-screen bg-gray-100 flex flex-col md:flex-row items-center justify-center gap-8 p-6">
 
-          <form
-            onSubmit={handleSubmit}
-            className="flex flex-col gap-y-4 py-4 text-gray-600"
+      {/* FORM */}
+      <div className="bg-white shadow-lg rounded-xl p-6 w-full md:w-[500px]">
+        <p className="text-center py-3 font-bold text-xl">
+          Make Payment
+        </p>
+
+        <form
+          onSubmit={handleSubmit}
+          className="flex flex-col gap-4"
+        >
+
+          <div>
+            <label className="font-medium">
+              Revenue Type
+            </label>
+
+            <select
+              value={revenueTypeId}
+              onChange={handleRevenueChange}
+              className="w-full border p-2 rounded-md"
+            >
+              <option value="">
+                Select Revenue Type
+              </option>
+
+              {revenueTypes.map((type) => (
+                <option
+                  key={type.id}
+                  value={String(type.id)}
+                >
+                  {type.name} ({type.period})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="font-medium">
+              Amount
+            </label>
+
+            <input
+              value={amount}
+              disabled
+              className="w-full border p-2 rounded-md"
+            />
+          </div>
+
+          <div>
+            <label className="font-medium">
+              Period Reference
+            </label>
+
+            <select
+              value={periodReference}
+              onChange={(e) =>
+                setPeriodReference(
+                  e.target.value
+                )
+              }
+              className="w-full border p-2 rounded-md"
+            >
+              <option value="">
+                Select Period
+              </option>
+
+              {periodOptions.map((p, i) => (
+                <option
+                  key={i}
+                  value={p}
+                >
+                  {p}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <button
+            disabled={loading}
+            className="bg-green-800 text-white p-2 rounded-md flex justify-center gap-2"
           >
-            {/* Revenue Type */}
-            <div className="flex flex-col">
-              <label className="mb-1 font-medium">Revenue Type</label>
-              <select
-                value={revenueTypeId} // ✅ STRING VALUE
-                onChange={handleRevenueChange}
-                className="border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-green-600"
-              >
-                <option value="">Select Revenue Type</option>
-                {revenueTypes.map((type) => (
-                  <option key={type.id} value={String(type.id)}>
-                    {type.name} ({type.period})
-                  </option>
-                ))}
-              </select>
-            </div>
+            {loading
+              ? "Processing..."
+              : "Pay Now"}
+          </button>
 
-            {/* Description */}
-            {selectedRevenue?.description && (
-              <div className="bg-green-50 border border-green-200 p-3 rounded-md text-sm text-green-800">
-                {selectedRevenue.description}
-              </div>
-            )}
-
-            {/* Amount */}
-            <div className="flex flex-col">
-              <label className="mb-1 font-medium">Amount</label>
-              <input
-                disabled
-                type="number"
-                value={amount}
-                className="border border-gray-300 rounded-md p-2"
-              />
-            </div>
-
-            {/* Period */}
-            <div className="flex flex-col">
-              <label className="mb-1 font-medium">Period Reference</label>
-              <select
-                value={periodReference}
-                onChange={(e) => setPeriodReference(e.target.value)}
-                className="border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-green-600"
-              >
-                <option value="">Select Period</option>
-                {periodOptions.map((option, index) => (
-                  <option key={index} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="bg-green-800 text-white rounded-md py-2 mt-2 hover:bg-green-600 transition disabled:opacity-60 flex justify-center items-center gap-2"
-            >
-              {loading && (
-                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-              )}
-              {loading ? "Processing..." : "Continue"}
-            </button>
-          </form>
-        </div>
-
-        {/* Side Info */}
-        <div className="max-w-md text-gray-700 space-y-3">
-          <p className="font-bold text-xl md:text-2xl">
-            Payment Information
-          </p>
-          <ul className="list-disc pl-5 space-y-2 text-sm">
-            <li>Your payment details are secured.</li>
-            <li>Authentication is handled securely.</li>
-            <li>Your payment is recorded immediately after validation.</li>
-          </ul>
-
-          <p className="text-sm mt-4">
-            You can track your payment{" "}
-            <Link
-              to="/history"
-              className="text-green-700 font-semibold hover:underline"
-            >
-              Status
-            </Link>
-          </p>
-        </div>
+        </form>
       </div>
+
+      {/* INFO */}
+      <div className="max-w-md text-gray-700">
+        <h2 className="text-xl font-bold mb-2">
+          Payment Information
+        </h2>
+
+        <ul className="list-disc pl-5 text-sm space-y-2">
+          <li>Secure Paystack payment</li>
+          <li>Instant receipt generation</li>
+          <li>Automatically recorded in dashboard</li>
+        </ul>
+
+        <p className="mt-4 text-sm">
+          View history →
+          <Link
+            className="text-green-700 ml-1"
+            to="/history"
+          >
+            Payment History
+          </Link>
+        </p>
+      </div>
+
     </div>
   );
 };
